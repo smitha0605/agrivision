@@ -1,0 +1,1682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgriVision — The Farm Brain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --soil:   #2C1810;
+  --earth:  #5C3D2E;
+  --clay:   #A0522D;
+  --wheat:  #D4A853;
+  --lime:   #8DB600;
+  --leaf:   #4A7C59;
+  --sky:    #87CEEB;
+  --fog:    #F5F1EB;
+  --paper:  #FDFAF5;
+  --ink:    #1C1C1C;
+  --muted:  #7A7265;
+  --border: rgba(92,61,46,0.12);
+  --shadow: 0 4px 24px rgba(44,24,16,0.08);
+  --r:      16px;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── LAYOUT ─────────────────────────────────────────────── */
+.shell { display:flex; min-height:100vh; }
+
+/* ── SIDEBAR ────────────────────────────────────────────── */
+.sidebar {
+  width: 260px;
+  background: var(--soil);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top:0; left:0; bottom:0;
+  z-index: 100;
+  transition: transform 0.3s;
+}
+
+.sidebar-logo {
+  padding: 28px 24px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.logo-text {
+  font-family: 'Fraunces', serif;
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: var(--wheat);
+  letter-spacing: -0.5px;
+}
+.logo-sub { font-size: 0.72rem; color: rgba(255,255,255,0.4); margin-top:2px; letter-spacing:1.5px; text-transform:uppercase; }
+
+.farm-badge {
+  margin: 16px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.farm-badge:hover { background: rgba(255,255,255,0.1); }
+.farm-badge-label { font-size:0.68rem; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:1px; }
+.farm-badge-name { font-size:0.9rem; font-weight:600; color:white; margin-top:2px; }
+.farm-badge-detail { font-size:0.75rem; color:rgba(255,255,255,0.5); margin-top:1px; }
+
+nav { flex:1; padding: 8px 0; overflow-y:auto; }
+
+.nav-section { padding: 12px 20px 4px; font-size:0.65rem; color:rgba(255,255,255,0.3); text-transform:uppercase; letter-spacing:1.5px; }
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 20px;
+  cursor: pointer;
+  color: rgba(255,255,255,0.6);
+  font-size: 0.88rem;
+  font-weight: 500;
+  transition: all 0.18s;
+  border-left: 3px solid transparent;
+}
+.nav-item:hover { color:white; background:rgba(255,255,255,0.05); }
+.nav-item.active { color:var(--wheat); background:rgba(212,168,83,0.1); border-left-color:var(--wheat); }
+.nav-icon { font-size: 1.1rem; width:22px; text-align:center; }
+
+.sidebar-footer {
+  padding: 16px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+.ai-btn {
+  width:100%; padding:12px; border-radius:12px;
+  background: linear-gradient(135deg, var(--lime), var(--leaf));
+  border:none; color:white; font-family:'DM Sans',sans-serif;
+  font-size:0.88rem; font-weight:600; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  transition: opacity 0.2s;
+}
+.ai-btn:hover { opacity:0.9; }
+
+/* ── MAIN CONTENT ───────────────────────────────────────── */
+.main {
+  margin-left: 260px;
+  flex:1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.topbar {
+  position: sticky; top:0; z-index:50;
+  background: rgba(253,250,245,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.page-title {
+  font-family: 'Fraunces', serif;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--soil);
+}
+.topbar-actions { display:flex; gap:10px; align-items:center; }
+
+.page { display:none; padding:32px; }
+.page.active { display:block; }
+
+/* ── CARDS ──────────────────────────────────────────────── */
+.card {
+  background: white;
+  border-radius: var(--r);
+  border: 1px solid var(--border);
+  padding: 24px;
+  box-shadow: var(--shadow);
+}
+.card-sm { padding: 16px; }
+
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+.grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+.grid-auto { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:20px; }
+
+/* ── STAT CARDS ─────────────────────────────────────────── */
+.stat-card {
+  background: white;
+  border-radius: var(--r);
+  border: 1px solid var(--border);
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.stat-icon {
+  width:52px; height:52px; border-radius:14px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:1.4rem; flex-shrink:0;
+}
+.stat-val { font-family:'Fraunces',serif; font-size:1.8rem; font-weight:700; color:var(--soil); line-height:1; }
+.stat-label { font-size:0.78rem; color:var(--muted); margin-top:3px; }
+
+/* ── BUTTONS ────────────────────────────────────────────── */
+.btn {
+  display:inline-flex; align-items:center; gap:7px;
+  padding:10px 20px; border-radius:10px;
+  font-family:'DM Sans',sans-serif; font-size:0.88rem; font-weight:600;
+  cursor:pointer; border:none; transition:all 0.18s;
+}
+.btn-primary { background:var(--soil); color:white; }
+.btn-primary:hover { background:var(--earth); }
+.btn-green { background:var(--leaf); color:white; }
+.btn-green:hover { background:var(--lime); }
+.btn-outline { background:transparent; border:1.5px solid var(--border); color:var(--earth); }
+.btn-outline:hover { border-color:var(--clay); }
+.btn-sm { padding:7px 14px; font-size:0.8rem; }
+.btn-full { width:100%; justify-content:center; }
+
+/* ── FORMS ──────────────────────────────────────────────── */
+.form-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; }
+.field { display:flex; flex-direction:column; gap:5px; }
+.field label { font-size:0.78rem; font-weight:600; color:var(--earth); text-transform:uppercase; letter-spacing:0.5px; }
+.field input, .field select, .field textarea {
+  padding: 10px 13px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-family:'DM Sans',sans-serif; font-size:0.88rem;
+  color:var(--ink); background:white;
+  outline:none; transition:border-color 0.18s;
+}
+.field input:focus, .field select:focus, .field textarea:focus { border-color:var(--clay); }
+
+/* ── BADGES / TAGS ──────────────────────────────────────── */
+.badge {
+  display:inline-flex; align-items:center; gap:4px;
+  padding:3px 10px; border-radius:20px;
+  font-size:0.72rem; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;
+}
+.badge-green  { background:rgba(77,124,89,0.12); color:var(--leaf); }
+.badge-amber  { background:rgba(212,168,83,0.15); color:#b8860b; }
+.badge-red    { background:rgba(220,53,69,0.1);  color:#c0392b; }
+.badge-gray   { background:rgba(0,0,0,0.06); color:var(--muted); }
+
+/* ── ALERT BOXES ────────────────────────────────────────── */
+.alert {
+  padding:12px 16px; border-radius:10px;
+  font-size:0.85rem; line-height:1.5;
+  display:flex; align-items:flex-start; gap:10px;
+}
+.alert-info    { background:rgba(135,206,235,0.15); border-left:3px solid var(--sky); }
+.alert-success { background:rgba(77,124,89,0.1);  border-left:3px solid var(--leaf); }
+.alert-warn    { background:rgba(212,168,83,0.15); border-left:3px solid var(--wheat); }
+.alert-danger  { background:rgba(220,53,69,0.1);  border-left:3px solid #e74c3c; }
+
+/* ── SECTION HEADERS ────────────────────────────────────── */
+.section-head { margin-bottom:20px; }
+.section-head h2 {
+  font-family:'Fraunces',serif; font-size:1.4rem; font-weight:700;
+  color:var(--soil);
+}
+.section-head p { color:var(--muted); font-size:0.88rem; margin-top:4px; }
+
+/* ── PROGRESS BARS ──────────────────────────────────────── */
+.prog-bar { height:6px; background:#eee; border-radius:3px; overflow:hidden; }
+.prog-fill { height:100%; border-radius:3px; transition:width 0.6s; }
+
+/* ── DIVIDER ────────────────────────────────────────────── */
+.divider { border:none; border-top:1px solid var(--border); margin:20px 0; }
+
+/* ── UPLOAD ZONE ────────────────────────────────────────── */
+.upload-zone {
+  border: 2px dashed var(--border);
+  border-radius: var(--r);
+  padding: 40px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--fog);
+}
+.upload-zone:hover, .upload-zone.drag { border-color:var(--clay); background:rgba(160,82,45,0.04); }
+.upload-zone img { max-height:220px; border-radius:10px; object-fit:cover; margin-top:12px; }
+
+/* ── CHAT ───────────────────────────────────────────────── */
+.chat-wrap { display:flex; flex-direction:column; height:480px; }
+.chat-msgs {
+  flex:1; overflow-y:auto; padding:16px;
+  display:flex; flex-direction:column; gap:10px;
+  background:var(--fog); border-radius:12px 12px 0 0;
+}
+.chat-bubble {
+  max-width:80%; padding:10px 14px; border-radius:14px;
+  font-size:0.87rem; line-height:1.55; animation:fadeUp 0.2s;
+}
+.chat-bubble.user {
+  align-self:flex-end;
+  background: var(--soil); color:white;
+  border-bottom-right-radius:4px;
+}
+.chat-bubble.bot {
+  align-self:flex-start;
+  background:white; color:var(--ink);
+  border:1px solid var(--border);
+  border-bottom-left-radius:4px;
+}
+.chat-bubble.typing { align-self:flex-start; background:white; border:1px solid var(--border); padding:12px 16px; }
+.dots span {
+  display:inline-block; width:6px; height:6px;
+  background:var(--clay); border-radius:50%; margin:0 2px;
+  animation:bounce 1.2s infinite;
+}
+.dots span:nth-child(2){animation-delay:0.2s}
+.dots span:nth-child(3){animation-delay:0.4s}
+.chat-input-row {
+  display:flex; gap:8px; padding:12px;
+  background:white; border-radius:0 0 12px 12px;
+  border:1px solid var(--border); border-top:none;
+}
+.chat-input-row input {
+  flex:1; padding:10px 14px;
+  border:1.5px solid var(--border); border-radius:10px;
+  font-family:'DM Sans',sans-serif; font-size:0.88rem;
+  outline:none;
+}
+.chat-input-row input:focus { border-color:var(--clay); }
+
+/* ── CHIPS ──────────────────────────────────────────────── */
+.chips { display:flex; flex-wrap:wrap; gap:6px; padding:8px 12px; background:white; }
+.chip {
+  padding:5px 12px; border-radius:20px;
+  background:rgba(92,61,46,0.06); border:1px solid var(--border);
+  font-size:0.75rem; font-weight:600; color:var(--earth);
+  cursor:pointer; font-family:'DM Sans',sans-serif; transition:all 0.15s;
+}
+.chip:hover { background:var(--soil); color:white; border-color:var(--soil); }
+
+/* ── WEATHER CARDS ──────────────────────────────────────── */
+.weather-day {
+  background:white; border-radius:12px;
+  border:1px solid var(--border);
+  padding:16px; text-align:center;
+}
+.weather-icon { font-size:2rem; }
+.weather-temp { font-family:'Fraunces',serif; font-size:1.3rem; font-weight:700; color:var(--soil); }
+.weather-desc { font-size:0.75rem; color:var(--muted); margin-top:3px; }
+
+/* ── PRICE CHART ────────────────────────────────────────── */
+.price-chart { position:relative; height:120px; }
+.price-bar-wrap { display:flex; align-items:flex-end; gap:3px; height:100%; }
+.price-bar {
+  flex:1; background:linear-gradient(to top, var(--leaf), var(--lime));
+  border-radius:4px 4px 0 0; transition:height 0.4s;
+  cursor:default; position:relative;
+}
+.price-bar:hover::after {
+  content: attr(data-tip);
+  position:absolute; bottom:105%; left:50%; transform:translateX(-50%);
+  background:var(--soil); color:white; font-size:0.7rem; padding:3px 7px;
+  border-radius:5px; white-space:nowrap; pointer-events:none;
+}
+
+/* ── DISEASE RESULT ─────────────────────────────────────── */
+.severity-pill {
+  padding:5px 14px; border-radius:20px;
+  font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;
+}
+.severity-NONE     { background:rgba(77,124,89,0.15); color:var(--leaf); }
+.severity-MEDIUM   { background:rgba(212,168,83,0.2); color:#b8860b; }
+.severity-HIGH     { background:rgba(220,53,69,0.12); color:#c0392b; }
+.severity-CRITICAL { background:rgba(200,0,0,0.15); color:#8b0000; }
+
+/* ── FARM PLAN DAY ──────────────────────────────────────── */
+.plan-day { border-radius:12px; border:1px solid var(--border); overflow:hidden; }
+.plan-day-header { padding:10px 16px; background:var(--fog); display:flex; justify-content:space-between; align-items:center; }
+.plan-day-body { padding:12px 16px; background:white; }
+.plan-action { font-size:0.83rem; padding:3px 0; }
+.plan-alert { font-size:0.83rem; color:#c0392b; padding:3px 0; }
+
+/* ── SCHEDULE TABLE ─────────────────────────────────────── */
+table { width:100%; border-collapse:collapse; }
+th { text-align:left; padding:10px 12px; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.5px; color:var(--muted); border-bottom:1px solid var(--border); }
+td { padding:11px 12px; font-size:0.87rem; border-bottom:1px solid rgba(0,0,0,0.04); }
+tr:last-child td { border-bottom:none; }
+tr:hover td { background:var(--fog); }
+
+/* ── ANIMATIONS ─────────────────────────────────────────── */
+@keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+@keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-5px)} }
+@keyframes spin { to{transform:rotate(360deg)} }
+
+.spinner {
+  width:22px; height:22px; border:2px solid var(--border);
+  border-top-color:var(--clay); border-radius:50%;
+  animation:spin 0.7s linear infinite; margin:0 auto;
+}
+
+/* ── MODAL ──────────────────────────────────────────────── */
+.modal-bg {
+  position:fixed; inset:0; background:rgba(0,0,0,0.5);
+  display:none; align-items:center; justify-content:center;
+  z-index:999; padding:20px;
+}
+.modal-bg.open { display:flex; }
+.modal-box {
+  background:white; border-radius:20px; padding:28px;
+  max-width:520px; width:100%;
+  box-shadow:0 20px 60px rgba(0,0,0,0.2);
+  animation:fadeUp 0.25s;
+}
+.modal-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+.modal-title { font-family:'Fraunces',serif; font-size:1.2rem; font-weight:700; color:var(--soil); }
+.modal-close { background:none; border:none; font-size:1.2rem; cursor:pointer; color:var(--muted); }
+
+/* ── RESPONSIVE ─────────────────────────────────────────── */
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%);}
+  .sidebar.open{transform:translateX(0);}
+  .main{margin-left:0;}
+  .grid-2,.grid-3{grid-template-columns:1fr;}
+  .page{padding:20px;}
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+<!-- ══════════════════ SIDEBAR ══════════════════ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-text">🌾 AgriVision</div>
+    <div class="logo-sub">The Farm Brain</div>
+  </div>
+
+  <div class="farm-badge" onclick="openModal('farmModal')">
+    <div class="farm-badge-label">Active Farm</div>
+    <div class="farm-badge-name" id="sb-farm-name">+ Create Farm Profile</div>
+    <div class="farm-badge-detail" id="sb-farm-detail">Click to set up your farm</div>
+  </div>
+
+  <nav>
+    <div class="nav-section">Overview</div>
+    <div class="nav-item active" onclick="goPage('dashboard')"><span class="nav-icon">🏠</span>Dashboard</div>
+
+    <div class="nav-section">Smart Tools</div>
+    <div class="nav-item" onclick="goPage('disease')"><span class="nav-icon">🔬</span>Disease Detection</div>
+    <div class="nav-item" onclick="goPage('fertilizer')"><span class="nav-icon">🧪</span>Fertilizer Calculator</div>
+    <div class="nav-item" onclick="goPage('planner')"><span class="nav-icon">🌤</span>Farm Planner</div>
+    <div class="nav-item" onclick="goPage('prices')"><span class="nav-icon">📈</span>Market Prices</div>
+    <div class="nav-item" onclick="goPage('recommend')"><span class="nav-icon">🤖</span>Crop Advisor</div>
+
+    <div class="nav-section">Farm</div>
+    <div class="nav-item" onclick="goPage('profile')"><span class="nav-icon">🏡</span>My Farm</div>
+    <div class="nav-item" onclick="goPage('schemes')"><span class="nav-icon">🏛️</span>Govt Schemes</div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <button class="ai-btn" onclick="openChat()">🤖 Ask AI Assistant</button>
+  </div>
+</aside>
+
+<!-- ══════════════════ MAIN ══════════════════════ -->
+<main class="main">
+<div class="topbar">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <button onclick="document.getElementById('sidebar').classList.toggle('open')" style="display:none;background:none;border:none;font-size:1.3rem;cursor:pointer;" id="menu-btn">☰</button>
+    <div class="page-title" id="topbar-title">Dashboard</div>
+  </div>
+  <div class="topbar-actions">
+    <span id="farm-chip" style="font-size:0.8rem;color:var(--muted);display:none;"></span>
+    <button class="btn btn-outline btn-sm" onclick="openModal('farmModal')">+ Farm Profile</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     PAGE: DASHBOARD
+════════════════════════════════════════════════ -->
+<div class="page active" id="page-dashboard">
+  <div style="margin-bottom:28px;">
+    <h1 style="font-family:'Fraunces',serif;font-size:2rem;font-weight:900;color:var(--soil);">
+      Good day, Farmer 🌱
+    </h1>
+    <p style="color:var(--muted);margin-top:4px;">Your intelligent farming companion. Data-driven. Field-ready.</p>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid-3" style="margin-bottom:24px;" id="dash-stats">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:rgba(92,61,46,0.08);">🌾</div>
+      <div><div class="stat-val" id="stat-crops">—</div><div class="stat-label">Active Crops</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:rgba(141,182,0,0.1);">📊</div>
+      <div><div class="stat-val">3</div><div class="stat-label">ML Models Running</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:rgba(135,206,235,0.2);">🗄️</div>
+      <div><div class="stat-val" id="stat-rows">4,349</div><div class="stat-label">Training Records</div></div>
+    </div>
+  </div>
+
+  <!-- Quick actions -->
+  <div class="section-head"><h2>What do you need today?</h2></div>
+  <div class="grid-auto" style="margin-bottom:28px;">
+    <div class="card" style="cursor:pointer;transition:transform 0.2s;" onmouseenter="this.style.transform='translateY(-3px)'" onmouseleave="this.style.transform=''" onclick="goPage('disease')">
+      <div style="font-size:2.2rem;margin-bottom:10px;">🔬</div>
+      <div style="font-family:'Fraunces',serif;font-size:1.05rem;font-weight:700;color:var(--soil);">Diagnose Leaf Disease</div>
+      <div style="font-size:0.82rem;color:var(--muted);margin-top:5px;">Upload a photo → instant disease ID + treatment</div>
+      <div style="margin-top:12px;"><span class="badge badge-green">CNN Model</span></div>
+    </div>
+    <div class="card" style="cursor:pointer;transition:transform 0.2s;" onmouseenter="this.style.transform='translateY(-3px)'" onmouseleave="this.style.transform=''" onclick="goPage('fertilizer')">
+      <div style="font-size:2.2rem;margin-bottom:10px;">🧪</div>
+      <div style="font-family:'Fraunces',serif;font-size:1.05rem;font-weight:700;color:var(--soil);">Fertilizer Calculator</div>
+      <div style="font-size:0.82rem;color:var(--muted);margin-top:5px;">Soil test → ICAR-standard NPK doses + cost</div>
+      <div style="margin-top:12px;"><span class="badge badge-amber">ICAR Standard</span></div>
+    </div>
+    <div class="card" style="cursor:pointer;transition:transform 0.2s;" onmouseenter="this.style.transform='translateY(-3px)'" onmouseleave="this.style.transform=''" onclick="goPage('planner')">
+      <div style="font-size:2.2rem;margin-bottom:10px;">🌤</div>
+      <div style="font-family:'Fraunces',serif;font-size:1.05rem;font-weight:700;color:var(--soil);">7-Day Farm Planner</div>
+      <div style="font-size:0.82rem;color:var(--muted);margin-top:5px;">Live weather → daily irrigation & spray actions</div>
+      <div style="margin-top:12px;"><span class="badge badge-green">Live Weather</span></div>
+    </div>
+    <div class="card" style="cursor:pointer;transition:transform 0.2s;" onmouseenter="this.style.transform='translateY(-3px)'" onmouseleave="this.style.transform=''" onclick="goPage('prices')">
+      <div style="font-size:2.2rem;margin-bottom:10px;">📈</div>
+      <div style="font-family:'Fraunces',serif;font-size:1.05rem;font-weight:700;color:var(--soil);">Market Price Forecast</div>
+      <div style="font-size:0.82rem;color:var(--muted);margin-top:5px;">3-week mandi price prediction + sell timing</div>
+      <div style="margin-top:12px;"><span class="badge badge-amber">ARIMA Forecast</span></div>
+    </div>
+    <div class="card" style="cursor:pointer;transition:transform 0.2s;" onmouseenter="this.style.transform='translateY(-3px)'" onmouseleave="this.style.transform=''" onclick="goPage('recommend')">
+      <div style="font-size:2.2rem;margin-bottom:10px;">🤖</div>
+      <div style="font-family:'Fraunces',serif;font-size:1.05rem;font-weight:700;color:var(--soil);">Crop Advisor</div>
+      <div style="font-size:0.82rem;color:var(--muted);margin-top:5px;">Enter soil data → best crop recommendation</div>
+      <div style="margin-top:12px;"><span class="badge badge-green">KNN + RandomForest</span></div>
+    </div>
+    <div class="card" style="cursor:pointer;transition:transform 0.2s;" onmouseenter="this.style.transform='translateY(-3px)'" onmouseleave="this.style.transform=''" onclick="goPage('schemes')">
+      <div style="font-size:2.2rem;margin-bottom:10px;">🏛️</div>
+      <div style="font-family:'Fraunces',serif;font-size:1.05rem;font-weight:700;color:var(--soil);">Govt Schemes</div>
+      <div style="font-size:0.82rem;color:var(--muted);margin-top:5px;">PM-KISAN, PMFBY, KCC, PMKSY — check eligibility</div>
+      <div style="margin-top:12px;"><span class="badge badge-gray">Free Benefits</span></div>
+    </div>
+  </div>
+
+  <!-- Active crops (if farm set) -->
+  <div id="dash-crops-section" style="display:none;">
+    <div class="section-head"><h2>Your Active Crops</h2></div>
+    <div id="dash-crops" class="grid-auto"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     PAGE: DISEASE DETECTION
+════════════════════════════════════════════════ -->
+<div class="page" id="page-disease">
+  <div class="section-head">
+    <h2>🔬 Crop Disease Detection</h2>
+    <p>Upload a clear photo of an affected leaf. Our model identifies the disease and prescribes treatment.</p>
+  </div>
+
+  <div class="grid-2">
+    <div>
+      <div class="card">
+        <div class="field" style="margin-bottom:16px;">
+          <label>Crop Type</label>
+          <select id="disease-crop">
+            <option value="tomato">Tomato</option>
+            <option value="potato">Potato</option>
+            <option value="rice">Rice</option>
+            <option value="wheat">Wheat</option>
+            <option value="corn">Corn / Maize</option>
+            <option value="cotton">Cotton</option>
+            <option value="grape">Grape</option>
+            <option value="apple">Apple</option>
+          </select>
+        </div>
+
+        <div class="upload-zone" id="upload-zone"
+          onclick="document.getElementById('leaf-file').click()"
+          ondragover="event.preventDefault();this.classList.add('drag')"
+          ondragleave="this.classList.remove('drag')"
+          ondrop="handleDrop(event)">
+          <div id="upload-placeholder">
+            <div style="font-size:2.5rem;">📸</div>
+            <div style="font-weight:600;color:var(--earth);margin-top:8px;">Click or drag a leaf photo here</div>
+            <div style="font-size:0.8rem;color:var(--muted);margin-top:4px;">JPG, PNG — max 10MB. Clear, well-lit photo of single leaf works best.</div>
+          </div>
+          <img id="leaf-preview" style="display:none;max-width:100%;"/>
+        </div>
+        <input type="file" id="leaf-file" accept="image/*" style="display:none" onchange="previewLeaf(this)">
+
+        <div style="margin-top:16px;display:flex;gap:10px;">
+          <button class="btn btn-primary btn-full" onclick="detectDisease()">🔬 Analyse Leaf</button>
+          <button class="btn btn-outline" onclick="clearDisease()">Clear</button>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px;background:var(--fog);">
+        <div style="font-size:0.8rem;font-weight:600;color:var(--earth);margin-bottom:8px;">📋 TIPS FOR BEST RESULTS</div>
+        <div style="font-size:0.82rem;color:var(--muted);line-height:1.7;">
+          ✅ Take photo in natural daylight<br>
+          ✅ Single leaf filling most of the frame<br>
+          ✅ Both healthy and affected areas visible<br>
+          ❌ Avoid blurry or shadowed photos<br>
+          ❌ Don't photograph soil or stems
+        </div>
+      </div>
+    </div>
+
+    <div id="disease-result">
+      <div class="card" style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;text-align:center;background:var(--fog);border-style:dashed;">
+        <div style="font-size:3rem;opacity:0.3;">🌿</div>
+        <div style="color:var(--muted);font-size:0.88rem;margin-top:10px;">Upload a leaf photo to get diagnosis</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     PAGE: FERTILIZER CALCULATOR
+════════════════════════════════════════════════ -->
+<div class="page" id="page-fertilizer">
+  <div class="section-head">
+    <h2>🧪 ICAR Fertilizer Calculator</h2>
+    <p>Enter your soil test report values to get crop-specific fertilizer doses based on ICAR recommendations. Saves 35% vs guessing.</p>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div style="font-weight:600;color:var(--soil);margin-bottom:16px;">Crop & Soil Details</div>
+      <div class="form-row" style="margin-bottom:16px;">
+        <div class="field">
+          <label>Crop</label>
+          <select id="fc-crop">
+            <option value="rice">Rice</option>
+            <option value="wheat">Wheat</option>
+            <option value="maize">Maize / Corn</option>
+            <option value="cotton">Cotton</option>
+            <option value="sugarcane">Sugarcane</option>
+            <option value="tomato">Tomato</option>
+            <option value="potato">Potato</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Soil Type</label>
+          <select id="fc-soil">
+            <option value="loamy">Loamy (best)</option>
+            <option value="sandy">Sandy</option>
+            <option value="clay">Clay</option>
+            <option value="black">Black Soil</option>
+            <option value="red">Red Soil</option>
+            <option value="silty">Silty</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Farm Area (acres)</label>
+          <input type="number" id="fc-area" value="1" min="0.1" step="0.1">
+        </div>
+      </div>
+
+      <hr class="divider">
+      <div style="font-weight:600;color:var(--soil);margin-bottom:4px;">Soil Test Results <span style="font-weight:400;font-size:0.8rem;color:var(--muted)">(leave blank if unknown)</span></div>
+      <div style="font-size:0.78rem;color:var(--muted);margin-bottom:12px;">Values in kg/ha from your Soil Health Card</div>
+
+      <div class="form-row">
+        <div class="field"><label>Nitrogen (N) kg/ha</label><input type="number" id="fc-n" placeholder="e.g. 180"></div>
+        <div class="field"><label>Phosphorus (P) kg/ha</label><input type="number" id="fc-p" placeholder="e.g. 15"></div>
+        <div class="field"><label>Potassium (K) kg/ha</label><input type="number" id="fc-k" placeholder="e.g. 150"></div>
+        <div class="field"><label>Soil pH</label><input type="number" id="fc-ph" placeholder="e.g. 6.5" step="0.1" min="3" max="10"></div>
+      </div>
+
+      <div style="margin-top:20px;">
+        <button class="btn btn-primary btn-full" onclick="calcFertilizer()">🧪 Calculate Fertilizer Doses</button>
+      </div>
+
+      <div class="alert alert-info" style="margin-top:16px;font-size:0.82rem;">
+        💡 Don't have a soil test? Get a free Soil Health Card from your nearest KVK. It typically takes 5–7 days.
+      </div>
+    </div>
+
+    <div id="fert-result">
+      <div class="card" style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;text-align:center;background:var(--fog);border-style:dashed;">
+        <div style="font-size:3rem;opacity:0.3;">⚗️</div>
+        <div style="color:var(--muted);font-size:0.88rem;margin-top:10px;">Fill in the form to calculate fertilizer doses</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     PAGE: FARM PLANNER
+════════════════════════════════════════════════ -->
+<div class="page" id="page-planner">
+  <div class="section-head">
+    <h2>🌤 7-Day Farm Action Planner</h2>
+    <p>Real weather data from your location → daily actions: when to irrigate, spray, fertilize, and watch for alerts.</p>
+  </div>
+
+  <div class="card" style="margin-bottom:20px;">
+    <div class="form-row">
+      <div class="field">
+        <label>Your Crop</label>
+        <select id="plan-crop">
+          <option>Rice</option><option>Wheat</option><option>Maize</option>
+          <option>Cotton</option><option>Tomato</option><option>Potato</option>
+          <option>Sugarcane</option><option>Soybean</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Sow Date</label>
+        <input type="date" id="plan-sow">
+      </div>
+      <div class="field">
+        <label>Your City / Location</label>
+        <input type="text" id="plan-city" placeholder="e.g. Ludhiana, Nagpur" value="Delhi">
+      </div>
+      <div class="field" style="justify-content:flex-end;">
+        <label>&nbsp;</label>
+        <button class="btn btn-primary" onclick="loadWeatherPlan()">🌤 Get My Farm Plan</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="plan-result">
+    <div class="card" style="text-align:center;padding:40px;background:var(--fog);border-style:dashed;">
+      <div style="font-size:3rem;opacity:0.3;">🌾</div>
+      <div style="color:var(--muted);margin-top:10px;">Enter your crop and location to generate your farm plan</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     PAGE: MARKET PRICES
+════════════════════════════════════════════════ -->
+<div class="page" id="page-prices">
+  <div class="section-head">
+    <h2>📈 Mandi Price Forecast</h2>
+    <p>Historical price trends + 3-week forecast to help you decide when to sell.</p>
+  </div>
+
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;" id="crop-price-tabs"></div>
+
+  <div id="price-result">
+    <div class="spinner" style="margin-top:40px;"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     PAGE: CROP ADVISOR
+════════════════════════════════════════════════ -->
+<div class="page" id="page-recommend">
+  <div class="section-head">
+    <h2>🤖 Crop Advisor</h2>
+    <p>Enter your soil and climate data to get the best crop recommendation from 2,200 records and 22 crop types.</p>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="form-row">
+        <div class="field"><label>Nitrogen (N)</label><input type="number" id="r-n" placeholder="90"></div>
+        <div class="field"><label>Phosphorus (P)</label><input type="number" id="r-p" placeholder="42"></div>
+        <div class="field"><label>Potassium (K)</label><input type="number" id="r-k" placeholder="43"></div>
+        <div class="field"><label>Temperature (°C)</label><input type="number" id="r-temp" placeholder="25"></div>
+        <div class="field"><label>Humidity (%)</label><input type="number" id="r-humid" placeholder="70"></div>
+        <div class="field"><label>Soil pH</label><input type="number" id="r-ph" placeholder="6.5" step="0.1"></div>
+        <div class="field"><label>Rainfall (mm)</label><input type="number" id="r-rain" placeholder="120"></div>
+      </div>
+      <div style="margin-top:20px;display:flex;gap:10px;">
+        <button class="btn btn-primary" onclick="runRecommend()">🤖 Recommend Crop</button>
+        <button class="btn btn-outline" onclick="fillSample()">Try Sample Values</button>
+      </div>
+    </div>
+
+    <div id="rec-result">
+      <div class="card" style="height:100%;display:flex;align-items:center;justify-content:center;text-align:center;min-height:250px;background:var(--fog);border-style:dashed;">
+        <div>
+          <div style="font-size:2.5rem;opacity:0.3;">🌱</div>
+          <div style="color:var(--muted);font-size:0.88rem;margin-top:8px;">Enter soil values for recommendation</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     PAGE: MY FARM
+════════════════════════════════════════════════ -->
+<div class="page" id="page-profile">
+  <div class="section-head">
+    <h2>🏡 My Farm Profile</h2>
+    <p>Your farm's season-aware advisory hub. Track crops, record soil tests, get personalised advice.</p>
+  </div>
+  <div id="profile-content">
+    <div class="card" style="text-align:center;padding:40px;">
+      <div style="font-size:3rem;">🏡</div>
+      <div style="font-family:'Fraunces',serif;font-size:1.2rem;font-weight:700;color:var(--soil);margin-top:12px;">No farm profile yet</div>
+      <div style="color:var(--muted);margin:8px 0 20px;">Create your farm profile to get personalised advice across all features.</div>
+      <button class="btn btn-primary" onclick="openModal('farmModal')">+ Create Farm Profile</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     PAGE: GOVT SCHEMES
+════════════════════════════════════════════════ -->
+<div class="page" id="page-schemes">
+  <div class="section-head">
+    <h2>🏛️ Government Schemes for Farmers</h2>
+    <p>Free benefits most eligible farmers don't know about or haven't accessed.</p>
+  </div>
+  <div id="schemes-list" class="grid-auto"></div>
+</div>
+
+</main><!-- /main -->
+</div><!-- /shell -->
+
+<!-- ══════════════════════════════════════════════
+     MODALS
+══════════════════════════════════════════════ -->
+
+<!-- Farm Profile Modal -->
+<div class="modal-bg" id="farmModal">
+  <div class="modal-box" style="max-width:560px;">
+    <div class="modal-head">
+      <div class="modal-title">🏡 Create Farm Profile</div>
+      <button class="modal-close" onclick="closeModal('farmModal')">✕</button>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Farmer Name</label><input id="fm-name" placeholder="e.g. Ravi Kumar"></div>
+      <div class="field"><label>Village / City</label><input id="fm-loc" placeholder="e.g. Amritsar"></div>
+      <div class="field"><label>State</label>
+        <select id="fm-state">
+          <option>Punjab</option><option>Haryana</option><option>Uttar Pradesh</option>
+          <option>Maharashtra</option><option>Gujarat</option><option>Rajasthan</option>
+          <option>Madhya Pradesh</option><option>Bihar</option><option>West Bengal</option>
+          <option>Karnataka</option><option>Andhra Pradesh</option><option>Tamil Nadu</option>
+          <option>Telangana</option><option>Other</option>
+        </select>
+      </div>
+      <div class="field"><label>Total Farm Area (acres)</label><input type="number" id="fm-area" placeholder="5" min="0.1"></div>
+      <div class="field"><label>Primary Soil Type</label>
+        <select id="fm-soil">
+          <option>Loamy</option><option>Sandy</option><option>Clay</option>
+          <option>Black</option><option>Red</option><option>Silty</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-top:20px;display:flex;gap:10px;">
+      <button class="btn btn-primary btn-full" onclick="createFarm()">Create Profile</button>
+      <button class="btn btn-outline" onclick="closeModal('farmModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Crop Modal -->
+<div class="modal-bg" id="cropModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div class="modal-title">🌱 Add Active Crop</div>
+      <button class="modal-close" onclick="closeModal('cropModal')">✕</button>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Crop Name</label>
+        <select id="cm-crop">
+          <option>Rice</option><option>Wheat</option><option>Maize</option><option>Cotton</option>
+          <option>Sugarcane</option><option>Tomato</option><option>Potato</option><option>Onion</option>
+          <option>Soybean</option><option>Mustard</option><option>Groundnut</option>
+        </select>
+      </div>
+      <div class="field"><label>Sow Date</label><input type="date" id="cm-sow"></div>
+      <div class="field"><label>Area (acres)</label><input type="number" id="cm-area" value="1" min="0.1" step="0.1"></div>
+      <div class="field"><label>Season</label>
+        <select id="cm-season"><option>Kharif</option><option>Rabi</option><option>Zaid</option></select>
+      </div>
+    </div>
+    <div style="margin-top:20px;">
+      <button class="btn btn-primary btn-full" onclick="addCrop()">Add Crop</button>
+    </div>
+  </div>
+</div>
+
+<!-- AI Chat Modal -->
+<div class="modal-bg" id="chatModal">
+  <div class="modal-box" style="max-width:560px;padding:0;overflow:hidden;">
+    <div style="background:var(--soil);padding:18px 22px;display:flex;align-items:center;gap:12px;">
+      <div style="width:40px;height:40px;background:rgba(212,168,83,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;">🤖</div>
+      <div style="flex:1;">
+        <div style="font-family:'Fraunces',serif;font-weight:700;color:var(--wheat);font-size:1rem;">AgriVision Assistant</div>
+        <div style="font-size:0.7rem;color:rgba(255,255,255,0.45);" id="chat-source">● Smart farming AI</div>
+      </div>
+      <button onclick="closeModal('chatModal')" style="background:rgba(255,255,255,0.1);border:none;color:white;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:0.9rem;">✕</button>
+    </div>
+    <div class="chat-wrap">
+      <div class="chat-msgs" id="chat-msgs">
+        <div class="chat-bubble bot">🌾 Namaste! I'm your AgriVision farming assistant. Ask me about irrigation, fertilizers, pests, market prices, or government schemes!</div>
+      </div>
+      <div class="chips" id="chat-chips">
+        <span class="chip" onclick="sendChip('When should I water my wheat?')">💧 Wheat irrigation</span>
+        <span class="chip" onclick="sendChip('What fertilizer for rice?')">🧪 Rice fertilizer</span>
+        <span class="chip" onclick="sendChip('Tomato disease treatment')">🐛 Tomato disease</span>
+        <span class="chip" onclick="sendChip('Rice market price forecast')">📈 Rice price</span>
+        <span class="chip" onclick="sendChip('PM-KISAN scheme details')">🏛️ PM-KISAN</span>
+      </div>
+      <div class="chat-input-row">
+        <input id="chat-input" placeholder="Ask anything about farming…" onkeydown="if(event.key==='Enter')sendChat()">
+        <button class="btn btn-primary btn-sm" onclick="sendChat()">Send</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════
+const API = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+  ? `http://${location.hostname}:7860`
+  : location.origin;
+
+let STATE = {
+  farmId:       localStorage.getItem('agv_farm_id') || null,
+  farmName:     localStorage.getItem('agv_farm_name') || null,
+  currentCrop:  localStorage.getItem('agv_crop') || null,
+  chatHistory:  [],
+  currentPage:  'dashboard',
+};
+
+// ════════════════════════════════════════════════════════
+// NAVIGATION
+// ════════════════════════════════════════════════════════
+const PAGE_TITLES = {
+  dashboard:'Dashboard', disease:'Disease Detection', fertilizer:'Fertilizer Calculator',
+  planner:'Farm Planner', prices:'Market Prices', recommend:'Crop Advisor',
+  profile:'My Farm', schemes:'Govt Schemes',
+};
+
+function goPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const pg = document.getElementById('page-' + name);
+  if (!pg) return;
+  pg.classList.add('active');
+  STATE.currentPage = name;
+  document.getElementById('topbar-title').textContent = PAGE_TITLES[name] || name;
+  const navItems = document.querySelectorAll('.nav-item');
+  navItems.forEach(n => { if (n.textContent.toLowerCase().includes(PAGE_TITLES[name]?.toLowerCase().split(' ')[0])) n.classList.add('active'); });
+  if (name === 'prices')   initPrices();
+  if (name === 'schemes')  loadSchemes();
+  if (name === 'profile')  loadProfile();
+  if (name === 'planner')  setDefaultSow();
+  // Close sidebar on mobile
+  document.getElementById('sidebar').classList.remove('open');
+}
+
+function setDefaultSow() {
+  if (!document.getElementById('plan-sow').value) {
+    const d = new Date(); d.setDate(d.getDate()-30);
+    document.getElementById('plan-sow').value = d.toISOString().split('T')[0];
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// MODALS
+// ════════════════════════════════════════════════════════
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function openChat()     { openModal('chatModal'); }
+
+document.querySelectorAll('.modal-bg').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+
+// ════════════════════════════════════════════════════════
+// FARM PROFILE
+// ════════════════════════════════════════════════════════
+async function createFarm() {
+  const name = document.getElementById('fm-name').value.trim();
+  if (!name) { alert('Please enter your name.'); return; }
+  const body = {
+    name, location: document.getElementById('fm-loc').value,
+    state: document.getElementById('fm-state').value,
+    area_acres: parseFloat(document.getElementById('fm-area').value) || 1,
+    soil_type: document.getElementById('fm-soil').value.toLowerCase(),
+  };
+  try {
+    const res = await fetch(`${API}/api/farm`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+    const d = await res.json();
+    if (d.success) {
+      STATE.farmId = d.farm_id; STATE.farmName = name;
+      localStorage.setItem('agv_farm_id', d.farm_id);
+      localStorage.setItem('agv_farm_name', name);
+      updateSidebarFarm(name, body.location, body.state, body.area_acres + ' acres');
+      closeModal('farmModal');
+      loadProfile();
+      alert(`Farm profile created! ID: ${d.farm_id} (save this to recover your profile later)`);
+    }
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+async function addCrop() {
+  if (!STATE.farmId) { alert('Create a farm profile first.'); return; }
+  const body = {
+    farm_id: STATE.farmId,
+    crop_name: document.getElementById('cm-crop').value,
+    sow_date: document.getElementById('cm-sow').value,
+    area_acres: parseFloat(document.getElementById('cm-area').value) || 1,
+    season: document.getElementById('cm-season').value,
+  };
+  if (!body.sow_date) { alert('Please select a sow date.'); return; }
+  try {
+    const res = await fetch(`${API}/api/crop`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+    const d = await res.json();
+    if (d.success) {
+      STATE.currentCrop = body.crop_name;
+      localStorage.setItem('agv_crop', body.crop_name);
+      closeModal('cropModal');
+      loadProfile();
+    }
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+async function loadProfile() {
+  if (!STATE.farmId) return;
+  const el = document.getElementById('profile-content');
+  el.innerHTML = '<div class="spinner"></div>';
+  try {
+    const res = await fetch(`${API}/api/farm/${STATE.farmId}`);
+    const d = await res.json();
+    if (!d.success) throw new Error('Farm not found');
+    const f = d.farm;
+    updateSidebarFarm(f.name, f.location, f.state, f.area_acres + ' acres');
+
+    const cropCards = f.active_crops.map(c => `
+      <div class="card card-sm">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+          <div style="font-family:'Fraunces',serif;font-weight:700;font-size:1rem;color:var(--soil);">${c.crop_name}</div>
+          <span class="badge badge-green">${c.growth_stage}</span>
+        </div>
+        <div style="font-size:0.8rem;color:var(--muted);">
+          Sown: ${c.sow_date} · ${c.area_acres} acres · ${c.season}<br>
+          ${c.days_since_sow !== null ? `Day ${c.days_since_sow} of season` : ''}<br>
+          <span style="color:var(--earth);font-weight:500;">${c.irrigation_advice || ''}</span>
+        </div>
+      </div>
+    `).join('');
+
+    const soilInfo = f.latest_soil_test ? `
+      <div class="card" style="margin-bottom:16px;">
+        <div style="font-weight:600;color:var(--soil);margin-bottom:12px;">Latest Soil Test (${f.latest_soil_test.test_date})</div>
+        <div class="grid-3">
+          ${[['N',f.latest_soil_test.nitrogen],['P',f.latest_soil_test.phosphorus],['K',f.latest_soil_test.potassium],['pH',f.latest_soil_test.ph]].map(([k,v])=>`
+            <div style="text-align:center;padding:12px;background:var(--fog);border-radius:10px;">
+              <div style="font-family:'Fraunces',serif;font-size:1.3rem;font-weight:700;color:var(--soil);">${v ?? '—'}</div>
+              <div style="font-size:0.75rem;color:var(--muted);">${k}</div>
+            </div>`).join('')}
+        </div>
+      </div>` : '';
+
+    el.innerHTML = `
+      <div class="card" style="margin-bottom:16px;background:linear-gradient(135deg,var(--soil),var(--earth));color:white;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div>
+            <div style="font-family:'Fraunces',serif;font-size:1.5rem;font-weight:900;">${f.name}</div>
+            <div style="opacity:0.7;margin-top:4px;">${f.location}, ${f.state}</div>
+            <div style="opacity:0.6;font-size:0.82rem;margin-top:2px;">${f.area_acres} acres · ${f.soil_type} soil</div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-sm" style="background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.3);" onclick="openModal('cropModal')">+ Add Crop</button>
+          </div>
+        </div>
+      </div>
+
+      ${soilInfo}
+
+      <div style="font-weight:600;color:var(--soil);margin-bottom:12px;">Active Crops (${f.active_crops.length})</div>
+      ${f.active_crops.length ? `<div class="grid-auto">${cropCards}</div>` : `
+        <div class="card" style="text-align:center;padding:30px;background:var(--fog);">
+          <div style="color:var(--muted);">No active crops. Add your first crop to get season-aware advice.</div>
+          <button class="btn btn-primary btn-sm" style="margin-top:12px;" onclick="openModal('cropModal')">+ Add Crop</button>
+        </div>`}
+    `;
+    // Update dashboard crops
+    if (f.active_crops.length) {
+      document.getElementById('dash-crops-section').style.display = 'block';
+      document.getElementById('dash-crops').innerHTML = cropCards;
+      document.getElementById('stat-crops').textContent = f.active_crops.length;
+    }
+  } catch(e) {
+    el.innerHTML = `<div class="alert alert-warn">Could not load farm profile. Make sure the server is running.</div>`;
+  }
+}
+
+function updateSidebarFarm(name, loc, state, detail) {
+  document.getElementById('sb-farm-name').textContent = name || '+ Create Farm Profile';
+  document.getElementById('sb-farm-detail').textContent = loc && state ? `${loc}, ${state} · ${detail}` : (detail || 'Click to set up');
+  if (name) {
+    document.getElementById('farm-chip').textContent = `🏡 ${name}`;
+    document.getElementById('farm-chip').style.display = 'inline';
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// DISEASE DETECTION
+// ════════════════════════════════════════════════════════
+let leafFile = null;
+
+function previewLeaf(input) {
+  if (!input.files[0]) return;
+  leafFile = input.files[0];
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('upload-placeholder').style.display = 'none';
+    const img = document.getElementById('leaf-preview');
+    img.src = e.target.result; img.style.display = 'block';
+  };
+  reader.readAsDataURL(leafFile);
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.remove('drag');
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('image/')) {
+    leafFile = f;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      document.getElementById('upload-placeholder').style.display = 'none';
+      const img = document.getElementById('leaf-preview');
+      img.src = ev.target.result; img.style.display = 'block';
+    };
+    reader.readAsDataURL(f);
+  }
+}
+
+function clearDisease() {
+  leafFile = null;
+  document.getElementById('leaf-file').value = '';
+  document.getElementById('upload-placeholder').style.display = 'block';
+  document.getElementById('leaf-preview').style.display = 'none';
+  document.getElementById('disease-result').innerHTML = `
+    <div class="card" style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;text-align:center;background:var(--fog);border-style:dashed;">
+      <div style="font-size:3rem;opacity:0.3;">🌿</div>
+      <div style="color:var(--muted);font-size:0.88rem;margin-top:10px;">Upload a leaf photo to get diagnosis</div>
+    </div>`;
+}
+
+async function detectDisease() {
+  if (!leafFile) { alert('Please upload a leaf photo first.'); return; }
+  const crop = document.getElementById('disease-crop').value;
+  const el = document.getElementById('disease-result');
+  el.innerHTML = `<div class="card" style="text-align:center;padding:40px;"><div class="spinner"></div><div style="color:var(--muted);margin-top:12px;">Analysing leaf…</div></div>`;
+
+  const form = new FormData();
+  form.append('file', leafFile);
+
+  try {
+    const res = await fetch(`${API}/api/disease-detect?crop=${encodeURIComponent(crop)}`, { method:'POST', body:form });
+    const d = await res.json();
+    if (!d.success) throw new Error(d.detail || 'Detection failed');
+    const r = d.data;
+    const sevClass = `severity-${r.severity}`;
+
+    el.innerHTML = `
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+          <div>
+            <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:4px;">Detection Result</div>
+            <div style="font-family:'Fraunces',serif;font-size:1.6rem;font-weight:900;color:var(--soil);">${r.disease}</div>
+            <div style="color:var(--muted);font-size:0.85rem;margin-top:2px;">${crop.charAt(0).toUpperCase()+crop.slice(1)} · ${r.confidence}% confidence</div>
+          </div>
+          <span class="severity-pill ${sevClass}">${r.severity === 'NONE' ? '✅ Healthy' : r.severity}</span>
+        </div>
+
+        <!-- Confidence bar -->
+        <div style="margin-bottom:16px;">
+          <div style="display:flex;justify-content:space-between;font-size:0.78rem;color:var(--muted);margin-bottom:4px;">
+            <span>Model Confidence</span><span>${r.confidence}%</span>
+          </div>
+          <div class="prog-bar">
+            <div class="prog-fill" style="width:${r.confidence}%;background:${r.confidence>80?'var(--leaf)':r.confidence>60?'var(--wheat)':'var(--clay)'}"></div>
+          </div>
+        </div>
+
+        ${r.severity !== 'NONE' ? `
+          <div class="alert alert-warn" style="margin-bottom:12px;">
+            <div>
+              <div style="font-weight:600;margin-bottom:3px;">Symptoms</div>
+              <div style="font-size:0.83rem;">${r.symptoms}</div>
+            </div>
+          </div>
+
+          <div class="grid-2" style="margin-bottom:12px;">
+            <div class="alert alert-success">
+              <div>
+                <div style="font-weight:600;margin-bottom:3px;">🌿 Organic Treatment</div>
+                <div style="font-size:0.82rem;">${r.organic_treatment}</div>
+              </div>
+            </div>
+            <div class="alert alert-info">
+              <div>
+                <div style="font-weight:600;margin-bottom:3px;">💊 Chemical Treatment</div>
+                <div style="font-size:0.82rem;">${r.chemical_treatment}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="alert alert-danger" style="font-size:0.83rem;">
+            ⏰ <strong>${r.urgency}</strong>
+          </div>
+        ` : `<div class="alert alert-success">✅ Your crop looks healthy! Continue monitoring every 3–5 days. Apply neem oil 5ml/L preventively every 15 days.</div>`}
+
+        <hr class="divider">
+        <div style="font-size:0.78rem;color:var(--muted);font-weight:600;margin-bottom:8px;">All conditions analysed</div>
+        ${r.all_conditions.map((c,i) => `
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+            <span style="font-size:0.82rem;width:110px;color:${i===0?'var(--soil)':'var(--muted)'};font-weight:${i===0?'600':'400'};">${c.condition}</span>
+            <div class="prog-bar" style="flex:1;">
+              <div class="prog-fill" style="width:${c.probability}%;background:${i===0?'var(--leaf)':'#ddd'}"></div>
+            </div>
+            <span style="font-size:0.78rem;color:var(--muted);width:36px;">${c.probability}%</span>
+          </div>`).join('')}
+      </div>`;
+  } catch(e) {
+    el.innerHTML = `<div class="alert alert-danger">Detection failed: ${e.message}. Make sure the server is running.</div>`;
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// FERTILIZER CALCULATOR
+// ════════════════════════════════════════════════════════
+async function calcFertilizer() {
+  const el = document.getElementById('fert-result');
+  el.innerHTML = `<div class="card" style="text-align:center;padding:40px;"><div class="spinner"></div></div>`;
+
+  const body = {
+    crop: document.getElementById('fc-crop').value,
+    soil_type: document.getElementById('fc-soil').value,
+    area_acres: parseFloat(document.getElementById('fc-area').value) || 1,
+    nitrogen_soil: parseFloat(document.getElementById('fc-n').value) || null,
+    phosphorus_soil: parseFloat(document.getElementById('fc-p').value) || null,
+    potassium_soil: parseFloat(document.getElementById('fc-k').value) || null,
+    ph: parseFloat(document.getElementById('fc-ph').value) || null,
+  };
+
+  try {
+    const res = await fetch(`${API}/api/fertilizer-calc`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+    const d = await res.json();
+    if (!d.success) throw new Error('Calculation failed');
+    const r = d.data;
+
+    const scheduleRows = r.application_schedule.map(s => `
+      <tr>
+        <td><strong>${s.stage}</strong></td>
+        <td>${s.N_kg} kg</td>
+        <td>${s.P_kg} kg</td>
+        <td>${s.K_kg} kg</td>
+      </tr>`).join('');
+
+    const productRows = r.products.map(p => `
+      <tr>
+        <td><strong>${p.product}</strong></td>
+        <td>${p.bags_50kg} bags</td>
+        <td>₹${p.cost.toLocaleString()}</td>
+        <td><span class="badge badge-green">${p.nutrient}</span></td>
+      </tr>`).join('');
+
+    el.innerHTML = `
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+          <div>
+            <div style="font-family:'Fraunces',serif;font-size:1.3rem;font-weight:700;color:var(--soil);">${r.crop.toUpperCase()} — ${r.area_acres} acre(s)</div>
+            <div style="font-size:0.82rem;color:var(--muted);">${r.soil_type} soil · ICAR Standard Recommendation</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-family:'Fraunces',serif;font-size:1.6rem;font-weight:900;color:var(--leaf);">₹${r.estimated_cost.toLocaleString()}</div>
+            <div style="font-size:0.75rem;color:var(--muted);">Total cost estimate</div>
+          </div>
+        </div>
+
+        <!-- Total NPK -->
+        <div class="grid-3" style="margin-bottom:16px;">
+          ${[['N', r.total_required.N_kg, '#2C6E49'],['P', r.total_required.P_kg, '#B5451B'],['K', r.total_required.K_kg, '#1D5EA8']].map(([k,v,c])=>`
+            <div style="text-align:center;background:var(--fog);border-radius:12px;padding:14px;">
+              <div style="font-family:'Fraunces',serif;font-size:1.8rem;font-weight:700;color:${c};">${v}</div>
+              <div style="font-size:0.8rem;color:var(--muted);">kg ${k} / ${r.area_acres}ac</div>
+            </div>`).join('')}
+        </div>
+
+        ${r.ph_advice ? `<div class="alert alert-warn" style="margin-bottom:16px;font-size:0.83rem;">${r.ph_advice}</div>` : ''}
+
+        <!-- Application Schedule -->
+        <div style="font-weight:600;color:var(--soil);margin-bottom:10px;">📅 Application Schedule</div>
+        <table style="margin-bottom:16px;">
+          <thead><tr><th>Stage</th><th>N (kg)</th><th>P (kg)</th><th>K (kg)</th></tr></thead>
+          <tbody>${scheduleRows}</tbody>
+        </table>
+
+        <!-- Products to buy -->
+        <div style="font-weight:600;color:var(--soil);margin-bottom:10px;">🛒 Products to Buy (50kg bags)</div>
+        <table style="margin-bottom:16px;">
+          <thead><tr><th>Product</th><th>Bags</th><th>Cost</th><th>Provides</th></tr></thead>
+          <tbody>${productRows}</tbody>
+        </table>
+
+        <div class="alert alert-success" style="font-size:0.82rem;">
+          💰 <strong>Savings vs blind application: ~₹${r.saving_vs_blind_application.toLocaleString()}</strong> — soil-test-based dosing reduces waste by 35% on average.
+        </div>
+
+        <div style="margin-top:12px;padding:12px;background:var(--fog);border-radius:10px;font-size:0.8rem;color:var(--muted);">
+          🌱 ${r.organic_supplement}
+        </div>
+
+        <div style="margin-top:8px;font-size:0.72rem;color:var(--muted);">Source: ${r.source}</div>
+      </div>`;
+  } catch(e) {
+    el.innerHTML = `<div class="alert alert-danger">Error: ${e.message}</div>`;
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// WEATHER FARM PLANNER
+// ════════════════════════════════════════════════════════
+const OWM_KEY = '';  // Optional: add OpenWeatherMap API key here
+const WMO_CODES = {
+  0:'☀️ Clear',1:'🌤 Mostly Clear',2:'⛅ Partly Cloudy',3:'☁️ Overcast',
+  45:'🌫 Foggy',48:'🌫 Icy Fog',51:'🌦 Light Drizzle',53:'🌧 Drizzle',55:'🌧 Heavy Drizzle',
+  61:'🌧 Light Rain',63:'🌧 Rain',65:'🌧 Heavy Rain',
+  71:'❄️ Light Snow',73:'❄️ Snow',75:'❄️ Heavy Snow',
+  80:'🌦 Rain Showers',81:'🌧 Heavy Showers',82:'⛈ Violent Showers',
+  95:'⛈ Thunderstorm',96:'⛈ Hail Storm',99:'⛈ Heavy Hail',
+};
+
+async function loadWeatherPlan() {
+  const crop     = document.getElementById('plan-crop').value;
+  const sow_date = document.getElementById('plan-sow').value;
+  const city     = document.getElementById('plan-city').value.trim() || 'Delhi';
+  const el       = document.getElementById('plan-result');
+
+  el.innerHTML = `<div class="card" style="text-align:center;padding:30px;"><div class="spinner"></div><div style="color:var(--muted);margin-top:10px;">Fetching weather for ${city}…</div></div>`;
+
+  try {
+    // Geocode city → lat/lon using Open-Meteo geocoding (free, no key)
+    const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=en&format=json`);
+    const geoD = await geoRes.json();
+    if (!geoD.results?.length) throw new Error(`City "${city}" not found. Try a major city name.`);
+    const { latitude, longitude, name: cityName, country } = geoD.results[0];
+
+    // Fetch 7-day forecast from Open-Meteo (free, no key needed)
+    const wxRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max,weathercode,relative_humidity_2m_max&timezone=auto&forecast_days=7`);
+    const wx = await wxRes.json();
+    const daily = wx.daily;
+
+    const forecast_days = daily.time.map((date, i) => ({
+      date, temp_max: daily.temperature_2m_max[i], temp_min: daily.temperature_2m_min[i],
+      rain_mm: daily.precipitation_sum[i] || 0, wind_kmh: daily.windspeed_10m_max[i] || 10,
+      humidity: daily.relative_humidity_2m_max[i] || 60,
+      description: WMO_CODES[daily.weathercode[i]] || '🌤',
+    }));
+
+    // Send to backend for farm-specific action plan
+    const planRes = await fetch(`${API}/api/farm-plan`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ crop, forecast_days, sow_date })
+    });
+    const planD = await planRes.json();
+    const plan = planD.data;
+    const sum = plan.summary;
+
+    // Render weather cards
+    const wxCards = forecast_days.map(d => `
+      <div class="weather-day">
+        <div style="font-size:0.75rem;font-weight:600;color:var(--muted);">${new Date(d.date+'T12:00:00').toLocaleDateString('en',{weekday:'short',month:'short',day:'numeric'})}</div>
+        <div class="weather-icon" style="margin:6px 0;">${d.description.split(' ')[0]}</div>
+        <div class="weather-temp">${Math.round(d.temp_max)}°C</div>
+        <div class="weather-desc">${d.description.split(' ').slice(1).join(' ')}</div>
+        <div style="font-size:0.72rem;margin-top:5px;color:var(--sky);">💧 ${d.rain_mm}mm</div>
+      </div>`).join('');
+
+    // Render action plan
+    const planCards = plan.plan.map((day, i) => `
+      <div class="plan-day">
+        <div class="plan-day-header">
+          <div style="font-weight:600;font-size:0.88rem;color:var(--soil);">${new Date(day.date+'T12:00:00').toLocaleDateString('en',{weekday:'long',month:'short',day:'numeric'})}</div>
+          <div style="font-size:0.78rem;color:var(--muted);">🌡 ${day.temp_max}°C · 💧 ${day.rain_mm}mm</div>
+        </div>
+        <div class="plan-day-body">
+          ${day.alerts.map(a=>`<div class="plan-alert">⚠️ ${a}</div>`).join('')}
+          ${day.actions.map(a=>`<div class="plan-action">${a}</div>`).join('')}
+        </div>
+      </div>`).join('');
+
+    const fungalColor = {'HIGH':'badge-red','MEDIUM':'badge-amber','LOW':'badge-green'}[sum.fungal_risk_level] || 'badge-gray';
+
+    el.innerHTML = `
+      <div class="alert alert-info" style="margin-bottom:16px;">
+        📍 <strong>${cityName}, ${country}</strong> · ${crop} ${sum.growth_stage || ''} ${sum.days_since_sow ? `(Day ${sum.days_since_sow})` : ''}
+      </div>
+
+      <!-- Summary banners -->
+      <div class="grid-3" style="margin-bottom:20px;">
+        <div class="stat-card card-sm">
+          <div class="stat-icon" style="background:rgba(135,206,235,0.2);">💧</div>
+          <div><div class="stat-val">${sum.total_rain_7d}mm</div><div class="stat-label">Rain this week</div></div>
+        </div>
+        <div class="stat-card card-sm">
+          <div class="stat-icon" style="background:rgba(212,168,83,0.15);">🍄</div>
+          <div><div class="stat-val"><span class="badge ${fungalColor}">${sum.fungal_risk_level}</span></div><div class="stat-label" style="margin-top:6px;">Fungal Risk</div></div>
+        </div>
+        <div class="stat-card card-sm">
+          <div class="stat-icon" style="background:rgba(77,124,89,0.12);">🌿</div>
+          <div><div class="stat-val">${sum.best_spray_days.length}</div><div class="stat-label">Good spray days</div></div>
+        </div>
+      </div>
+
+      <!-- Weather strip -->
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:20px;">${wxCards}</div>
+
+      <!-- Daily action plan -->
+      <div style="font-weight:600;color:var(--soil);font-family:'Fraunces',serif;font-size:1.1rem;margin-bottom:12px;">📋 Daily Action Plan</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">${planCards}</div>
+
+      ${sum.fungal_risk_level === 'HIGH' ? `
+        <div class="alert alert-danger" style="margin-top:16px;">
+          🍄 <strong>High fungal risk this week.</strong> Apply Mancozeb 75WP 2.5g/L or neem oil 5ml/L as a preventive spray on the first good spray day.
+        </div>` : ''}
+
+      <div style="margin-top:12px;font-size:0.72rem;color:var(--muted);">Weather data: Open-Meteo (open source) · Farm advice: AgriVision</div>
+    `;
+  } catch(e) {
+    el.innerHTML = `<div class="alert alert-danger">Error: ${e.message}</div>`;
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// MARKET PRICES
+// ════════════════════════════════════════════════════════
+let selectedCrop = 'Rice';
+
+async function initPrices() {
+  const tabs = document.getElementById('crop-price-tabs');
+  const crops = ['Rice','Wheat','Maize','Cotton','Soybean','Tomato','Sugarcane','Onion','Potato'];
+  tabs.innerHTML = crops.map(c => `
+    <button class="btn btn-sm ${c===selectedCrop?'btn-primary':'btn-outline'}"
+      onclick="selectPriceCrop('${c}')">${c}</button>`).join('');
+  loadPrice(selectedCrop);
+}
+
+function selectPriceCrop(crop) {
+  selectedCrop = crop;
+  initPrices();
+}
+
+async function loadPrice(crop) {
+  const el = document.getElementById('price-result');
+  el.innerHTML = `<div class="card" style="text-align:center;padding:30px;"><div class="spinner"></div></div>`;
+  try {
+    const res = await fetch(`${API}/api/price/${crop}`);
+    const d = await res.json();
+    if (!d.success) throw new Error('Price data unavailable');
+    const r = d.data;
+
+    // Bar chart
+    const maxP = Math.max(...r.history_12m, ...r.forecast.map(f=>f.predicted_price));
+    const minP = Math.min(...r.history_12m) * 0.95;
+    const bars = r.history_12m.map((p,i) => {
+      const h = Math.round(((p-minP)/(maxP-minP))*100);
+      return `<div class="price-bar" style="height:${h}%;opacity:0.65" data-tip="${r.history_labels[i]}: ₹${p}"></div>`;
+    }).join('');
+    const forecastBars = r.forecast.map(f => {
+      const h = Math.round(((f.predicted_price-minP)/(maxP-minP))*100);
+      const color = f.change_pct > 0 ? 'linear-gradient(to top, #27ae60, #2ecc71)' : 'linear-gradient(to top, #e74c3c, #c0392b)';
+      return `<div class="price-bar" style="height:${h}%;background:${color}" data-tip="${f.date}: ₹${f.predicted_price} (${f.change_pct>0?'+':''}${f.change_pct}%)"></div>`;
+    }).join('');
+
+    const trendColor = r.trend==='rising'?'badge-green':r.trend==='falling'?'badge-red':'badge-gray';
+
+    el.innerHTML = `
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+          <div>
+            <div style="font-family:'Fraunces',serif;font-size:1.6rem;font-weight:900;color:var(--soil);">${r.crop}</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+              <span style="font-size:0.88rem;color:var(--muted);">Current price:</span>
+              <span style="font-family:'Fraunces',serif;font-size:1.3rem;font-weight:700;color:var(--leaf);">₹${r.current_price.toLocaleString()}/qtl</span>
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <span class="badge ${trendColor}" style="font-size:0.8rem;">📊 ${r.trend.toUpperCase()}</span>
+            <div style="font-size:0.78rem;color:var(--muted);margin-top:4px;">Best time to sell: ${r.best_time_to_sell}</div>
+          </div>
+        </div>
+
+        <!-- Chart -->
+        <div style="margin-bottom:6px;display:flex;justify-content:space-between;font-size:0.72rem;color:var(--muted);">
+          <span>← 12 months history</span><span>3-week forecast →</span>
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:3px;height:130px;margin-bottom:16px;padding:4px 0;border-bottom:1px solid var(--border);">
+          ${bars}
+          <div style="width:1px;background:var(--clay);margin:0 3px;align-self:stretch;opacity:0.4;"></div>
+          ${forecastBars}
+        </div>
+        <div style="display:flex;gap:16px;margin-bottom:16px;font-size:0.78rem;">
+          <div style="display:flex;align-items:center;gap:5px;"><div style="width:12px;height:12px;background:var(--leaf);border-radius:2px;opacity:0.65;"></div>Historical</div>
+          <div style="display:flex;align-items:center;gap:5px;"><div style="width:12px;height:12px;background:#27ae60;border-radius:2px;"></div>Forecast (rising)</div>
+          <div style="display:flex;align-items:center;gap:5px;"><div style="width:12px;height:12px;background:#e74c3c;border-radius:2px;"></div>Forecast (falling)</div>
+        </div>
+
+        <!-- Forecast table -->
+        <table style="margin-bottom:16px;">
+          <thead><tr><th>Week</th><th>Date</th><th>Forecast Price</th><th>Change</th></tr></thead>
+          <tbody>
+            ${r.forecast.map(f=>`
+              <tr>
+                <td>Week ${f.week}</td>
+                <td>${f.date}</td>
+                <td style="font-weight:600;">₹${f.predicted_price.toLocaleString()}/qtl</td>
+                <td style="color:${f.change_pct>0?'var(--leaf)':'#e74c3c'};font-weight:600;">${f.change_pct>0?'+':''}${f.change_pct}%</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+
+        <div class="alert ${r.trend==='rising'?'alert-success':r.trend==='falling'?'alert-danger':'alert-info'}">
+          ${r.advice}
+        </div>
+        <div style="margin-top:8px;font-size:0.72rem;color:var(--muted);">${r.disclaimer}</div>
+      </div>`;
+  } catch(e) {
+    el.innerHTML = `<div class="alert alert-danger">Error: ${e.message}</div>`;
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// CROP ADVISOR
+// ════════════════════════════════════════════════════════
+function fillSample() {
+  const vals = {n:90,p:42,k:43,temp:25,humid:70,ph:6.5,rain:120};
+  document.getElementById('r-n').value=vals.n; document.getElementById('r-p').value=vals.p;
+  document.getElementById('r-k').value=vals.k; document.getElementById('r-temp').value=vals.temp;
+  document.getElementById('r-humid').value=vals.humid; document.getElementById('r-ph').value=vals.ph;
+  document.getElementById('r-rain').value=vals.rain;
+}
+
+async function runRecommend() {
+  const el = document.getElementById('rec-result');
+  el.innerHTML = `<div class="card" style="text-align:center;padding:30px;"><div class="spinner"></div></div>`;
+  const body = {
+    N: parseFloat(document.getElementById('r-n').value)||90,
+    P: parseFloat(document.getElementById('r-p').value)||42,
+    K: parseFloat(document.getElementById('r-k').value)||43,
+    temperature: parseFloat(document.getElementById('r-temp').value)||25,
+    humidity: parseFloat(document.getElementById('r-humid').value)||70,
+    ph: parseFloat(document.getElementById('r-ph').value)||6.5,
+    rainfall: parseFloat(document.getElementById('r-rain').value)||120,
+  };
+  try {
+    const res = await fetch(`${API}/api/recommend-crop`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+    const d = await res.json();
+    if (!d.success) throw new Error('Recommendation failed');
+    const ideal = d.idealConditions || {};
+
+    el.innerHTML = `
+      <div class="card">
+        <div style="text-align:center;margin-bottom:16px;">
+          <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);">Best Crop for Your Soil</div>
+          <div style="font-family:'Fraunces',serif;font-size:2rem;font-weight:900;color:var(--soil);margin:6px 0;">${d.bestCrop.toUpperCase()}</div>
+          <div style="font-family:'Fraunces',serif;font-size:1.6rem;font-weight:700;color:var(--leaf);">${d.confidence}%</div>
+          <div style="font-size:0.78rem;color:var(--muted);">KNN confidence (k=21, 2200 records)</div>
+        </div>
+
+        <div style="font-size:0.82rem;padding:10px;background:rgba(141,182,0,0.1);border-radius:8px;margin-bottom:14px;">
+          🌿 ${d.greenTip}
+        </div>
+
+        <div style="font-weight:600;color:var(--soil);margin-bottom:8px;font-size:0.88rem;">Top 5 Recommendations</div>
+        ${d.top5.map((c,i)=>`
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+            <span style="font-size:0.8rem;color:var(--muted);width:14px;">${i+1}</span>
+            <span style="flex:1;font-size:0.88rem;font-weight:${i===0?'600':'400'};color:${i===0?'var(--soil)':'var(--ink)'};">${c.crop}</span>
+            <div class="prog-bar" style="width:80px;"><div class="prog-fill" style="width:${c.confidence}%;background:${i===0?'var(--leaf)':'#ccc'}"></div></div>
+            <span style="font-size:0.8rem;color:var(--muted);width:36px;">${c.confidence}%</span>
+          </div>`).join('')}
+      </div>`;
+  } catch(e) {
+    el.innerHTML = `<div class="alert alert-danger">Error: ${e.message}</div>`;
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// GOVT SCHEMES
+// ════════════════════════════════════════════════════════
+async function loadSchemes() {
+  const el = document.getElementById('schemes-list');
+  if (el.innerHTML.trim()) return; // already loaded
+  try {
+    const res = await fetch(`${API}/api/schemes`);
+    const d = await res.json();
+    el.innerHTML = d.schemes.map(s => `
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+          <div style="font-family:'Fraunces',serif;font-size:1.05rem;font-weight:700;color:var(--soil);">${s.name}</div>
+          <span class="badge badge-green">Free</span>
+        </div>
+        <div class="alert alert-success" style="margin-bottom:10px;font-size:0.83rem;">
+          💰 ${s.benefit}
+        </div>
+        <div style="font-size:0.8rem;color:var(--muted);margin-bottom:6px;"><strong>Eligible:</strong> ${s.eligibility}</div>
+        <div style="font-size:0.8rem;color:var(--earth);font-weight:500;">📍 How to apply: ${s.how}</div>
+      </div>`).join('');
+  } catch(e) {
+    el.innerHTML = `<div class="alert alert-warn">Could not load schemes. Make sure the server is running.</div>`;
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// AI CHAT
+// ════════════════════════════════════════════════════════
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  await sendMessage(msg);
+}
+
+function sendChip(msg) { sendMessage(msg); }
+
+async function sendMessage(msg) {
+  const box = document.getElementById('chat-msgs');
+
+  // User bubble
+  const ub = document.createElement('div');
+  ub.className = 'chat-bubble user'; ub.textContent = msg;
+  box.appendChild(ub);
+
+  // Typing
+  const tb = document.createElement('div');
+  tb.className = 'chat-bubble typing';
+  tb.innerHTML = '<div class="dots"><span></span><span></span><span></span></div>';
+  box.appendChild(tb);
+  box.scrollTop = box.scrollHeight;
+
+  STATE.chatHistory.push({role:'user', content:msg});
+
+  try {
+    const res = await fetch(`${API}/api/chat`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ message:msg, farm_id:STATE.farmId, history:STATE.chatHistory.slice(-10) })
+    });
+    const d = await res.json();
+    const reply = d.response || 'I could not process that. Please try again.';
+
+    box.removeChild(tb);
+    const ab = document.createElement('div');
+    ab.className = 'chat-bubble bot'; ab.textContent = reply;
+    box.appendChild(ab);
+    box.scrollTop = box.scrollHeight;
+
+    STATE.chatHistory.push({role:'assistant', content:reply});
+
+    const badge = document.getElementById('chat-source');
+    if (badge) badge.textContent = d.source === 'openai' ? '● GPT-4o-mini · online' : '● Smart fallback · offline';
+
+    // Update chips
+    updateChatChips(msg);
+  } catch(e) {
+    box.removeChild(tb);
+    const eb = document.createElement('div');
+    eb.className = 'chat-bubble bot'; eb.textContent = 'Server not responding. Start the backend with: python main.py';
+    box.appendChild(eb);
+    box.scrollTop = box.scrollHeight;
+  }
+}
+
+function updateChatChips(lastMsg) {
+  const q = lastMsg.toLowerCase();
+  const chips = document.getElementById('chat-chips');
+  if (!chips) return;
+  const map = [
+    [/rice|paddy/,    [['💧 Rice water','When is the best time to irrigate rice?'],['🐛 Rice pests','What diseases affect rice?'],['📈 Rice price','What is the rice price forecast?']]],
+    [/wheat/,         [['💧 Wheat water','How often to water wheat?'],['🌿 Wheat fertilizer','What NPK for wheat?'],['📈 Wheat price','Wheat market price forecast']]],
+    [/irrigat|water/, [['🔧 Drip setup','Tell me about drip irrigation'],['💰 Drip subsidy','Government subsidy for drip irrigation?'],['📅 Schedule','Best time of day to irrigate']]],
+    [/fertilizer|npk|urea/, [['🌱 Organic option','What are organic fertilizer alternatives?'],['🧪 Soil test','How to get a free soil test?'],['📅 Timing','When to apply fertilizer?']]],
+    [/pest|disease|insect/, [['🌿 Organic spray','Organic pesticide I can make at home?'],['🛡 Prevention','How to prevent pest attacks?'],['⚡ Emergency','My crop is dying, what to do?']]],
+  ];
+  for (const [re, suggestions] of map) {
+    if (re.test(q)) {
+      chips.innerHTML = suggestions.map(([label,msg])=>`<span class="chip" onclick="sendChip('${msg.replace(/'/g,"\\'")}')">${label}</span>`).join('');
+      return;
+    }
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  // Responsive menu button
+  if (window.innerWidth < 768) document.getElementById('menu-btn').style.display = 'block';
+
+  // Load farm if saved
+  if (STATE.farmId) {
+    loadProfile();
+  }
+
+  // Greet with farm name if known
+  if (STATE.farmName) {
+    document.querySelector('.page.active h1') &&
+      (document.querySelector('.page.active h1').innerHTML =
+        `Good day, ${STATE.farmName} 🌱`);
+  }
+});
+</script>
+</body>
+</html>
