@@ -42,11 +42,11 @@ AgriVision is a smart farming advisory system that goes beyond pretty dashboards
 ### 1. Clone the repo
 
 ```bash
-git clone https://github.com/YOUR_GITHUB_USERNAME/agrivision.git
+git clone https://github.com/smitha0605/agrivision.git
 cd agrivision
 ```
 
-> Replace `YOUR_GITHUB_USERNAME` with your actual GitHub username after you push the repo.
+> Replace `smitha0605` with your actual GitHub username after you push the repo.
 
 ### 2. Create a virtual environment
 
