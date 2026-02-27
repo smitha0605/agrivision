@@ -1,5 +1,7 @@
 # 🌾 AgriVision — The Farm Brain
 
+🌐 **Live Demo:** https://agrivision-jq4t.onrender.com
+
 > Real agricultural intelligence for Indian farmers. A full-stack ML-powered advisory platform built with FastAPI + Vanilla JS.
 
 ---
